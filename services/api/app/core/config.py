@@ -10,6 +10,7 @@ class Settings(BaseSettings):
 
     # Google Cloud
     GCP_PROJECT: str = ""
+    GOOGLE_API_KEY: str = ""
 
     class Config:
         env_file = ".env"
