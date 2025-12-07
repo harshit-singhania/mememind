@@ -1,6 +1,7 @@
 from prisma import Prisma
+from app.core.config import settings
 
-db = Prisma()
+db = Prisma(datasource={"url": settings.DATABASE_URL})
 
 async def connect_db():
     if not db.is_connected():
