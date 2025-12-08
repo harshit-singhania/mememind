@@ -13,9 +13,10 @@ model Job {
   id         String   @id @default(uuid())
   user_id    String
   status     String   @default("queued")
-  source_url String
-  mood       String?
+  source_url String?
   result_url String?
+  mood       String?
+  type       String   @default("image") // "image" or "video"
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 

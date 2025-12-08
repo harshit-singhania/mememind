@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, Image, ActivityIndicator, TouchableOpacity, Share } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { Video, ResizeMode } from 'expo-av';
 import { useMemeStore } from '../store/memeStore';
 import { apiClient } from '../api/client';
 import { CONFIG } from '../core/config';
@@ -48,18 +49,16 @@ export default function ResultScreen({ navigation }) {
       }
     } catch (err) {
       console.error(err);
-      // Don't stop polling immediately on network error, retry a few times?
-      // For now, let it keep trying or show error if consistent.
-      // setError('Failed to fetch status');
     }
   };
 
   const handleShare = async () => {
     if (memeUrl) {
       try {
-        // Android often fails to share remote URLs directly to apps like WhatsApp
-        // We need to download it locally first
-        const fileUri = FileSystem.cacheDirectory + 'meme_share.png';
+        const isVideo = memeUrl.endsWith('.mp4');
+        const fileExt = isVideo ? '.mp4' : '.png';
+        const mimeType = isVideo ? 'video/mp4' : 'image/png';
+        const fileUri = FileSystem.cacheDirectory + 'meme_share' + fileExt;
         
         const { uri } = await FileSystem.downloadAsync(
           memeUrl,
@@ -68,19 +67,18 @@ export default function ResultScreen({ navigation }) {
         
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(uri, {
-             mimeType: 'image/png',
+             mimeType: mimeType,
              dialogTitle: 'Share your meme'
           });
         } else {
-           // Fallback
             await Share.share({
               message: 'Check out my meme!',
-              url: memeUrl, // iOS might handle this better
+              url: memeUrl, 
             });
         }
       } catch (error) {
         console.error("Share failed:", error.message);
-        alert("Could not share image: " + error.message);
+        alert("Could not share: " + error.message);
       }
     }
   };
@@ -101,11 +99,24 @@ export default function ResultScreen({ navigation }) {
     }
 
     if (jobStatus === 'completed' && memeUrl) {
+      const isVideo = memeUrl.endsWith('.mp4');
       return (
         <View style={styles.resultContainer}>
-          <Image source={{ uri: memeUrl }} style={styles.memeImage} />
+          {isVideo ? (
+            <Video
+              style={styles.memeImage}
+              source={{ uri: memeUrl }}
+              useNativeControls
+              resizeMode={ResizeMode.CONTAIN}
+              isLooping
+              shouldPlay
+            />
+          ) : (
+            <Image source={{ uri: memeUrl }} style={styles.memeImage} />
+          )}
+          
           <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-            <Text style={styles.buttonText}>Share Meme 📤</Text>
+            <Text style={styles.buttonText}>Share {isVideo ? 'Reel' : 'Meme'} 📤</Text>
           </TouchableOpacity>
         </View>
       );

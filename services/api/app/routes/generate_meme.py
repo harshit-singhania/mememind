@@ -14,6 +14,7 @@ async def generate_meme(request: MemeRequest):
         "status": "queued",
         "source_url": request.media_url,
         "mood": request.mood_hint,
+        "type": request.type,
     })
     
     # Trigger background worker (still stubbed)

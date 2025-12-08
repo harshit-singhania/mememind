@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Image, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Image, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Switch } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useMemeStore } from '../store/memeStore';
 import { apiClient, uploadImage } from '../api/client';
@@ -8,6 +8,7 @@ export default function UploadScreen({ navigation }) {
   const [mood, setMood] = useState('');
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isVideoMode, setIsVideoMode] = useState(false);
   
   const setJob = useMemeStore((state) => state.setJob);
 
@@ -56,7 +57,8 @@ export default function UploadScreen({ navigation }) {
       const payload = {
         user_id: "mobile-user-" + Math.floor(Math.random() * 1000),
         mood_hint: mood,
-        media_url: uploadedUrl
+        media_url: uploadedUrl,
+        type: isVideoMode ? 'video' : 'image'
       };
 
       const response = await apiClient.post('/generate-meme', payload);
@@ -95,6 +97,16 @@ export default function UploadScreen({ navigation }) {
         value={mood}
         onChangeText={setMood}
       />
+      
+      <View style={styles.switchContainer}>
+        <Text style={styles.switchLabel}>Generate Reel (Video) 🎬</Text>
+        <Switch
+          trackColor={{ false: "#767577", true: "#81b0ff" }}
+          thumbColor={isVideoMode ? "#007AFF" : "#f4f3f4"}
+          onValueChange={setIsVideoMode}
+          value={isVideoMode}
+        />
+      </View>
 
       <TouchableOpacity 
         style={[styles.button, (!image || loading) && styles.disabled]} 
@@ -104,7 +116,7 @@ export default function UploadScreen({ navigation }) {
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Generate Meme 🚀</Text>
+          <Text style={styles.buttonText}>Generate {isVideoMode ? 'Reel' : 'Meme'} 🚀</Text>
         )}
       </TouchableOpacity>
     </ScrollView>
@@ -174,5 +186,22 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 30,
+    backgroundColor: '#f9f9f9',
+    padding: 15,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  switchLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
   },
 });

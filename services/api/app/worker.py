@@ -4,7 +4,7 @@ import uuid
 import aiohttp
 from app.services.db import db
 from app.services.supabase_client import SupabaseClient
-from app.agents.pipeline import run_meme_pipeline
+from app.agents.pipeline import run_meme_pipeline, run_video_pipeline
 
 async def download_file(url: str, dest_path: str):
     print(f"Downloading {url} to {dest_path}...")
@@ -18,7 +18,7 @@ async def download_file(url: str, dest_path: str):
                 raise Exception(f"Failed to download file from {url}. Status: {response.status}")
 
 async def process_job(job):
-    print(f"Processing job {job.id}...")
+    print(f"Processing job {job.id} ({job.type})...")
     
     # Update status to processing
     await db.job.update(where={"id": job.id}, data={"status": "processing"})
@@ -28,23 +28,17 @@ async def process_job(job):
     
     try:
         # Download source image
-        # If source_url is a Supabase URL, it might be accessible. 
-        # If it's a local path (from emulator?), we might have issues.
-        # Assuming it's a public URL (uploaded via /upload endpoint).
         if not job.source_url:
              raise Exception("No source URL provided")
 
         await download_file(job.source_url, temp_input)
         
-        import os
-        print(f"DEBUG: CWD: {os.getcwd()}")
-        print(f"DEBUG: temp_input absolute: {os.path.abspath(temp_input)}")
-        print(f"DEBUG: Exists? {os.path.exists(temp_input)}")
-
-        # Run Pipeline
-        # Note: run_meme_pipeline is likely synchronous or blocking if it uses PIL/Gemini sync. 
-        # If it's CPU bound, we might want to run in executor, but for now direct call.
-        result = run_meme_pipeline(temp_input)
+        # Run Pipeline based on type
+        print(f"DEBUG: Job Type: {job.type}")
+        if job.type == "video":
+            result = await run_video_pipeline(temp_input)
+        else:
+            result = run_meme_pipeline(temp_input)
         
         if result["status"] == "completed":
             local_result_path = result["result_path"]
@@ -52,7 +46,11 @@ async def process_job(job):
             
             # Upload Result
             supabase = SupabaseClient()
-            result_filename = f"result_{job.id}.png"
+            
+            # Determine extension
+            ext = "mp4" if job.type == "video" else "png"
+            result_filename = f"result_{job.id}.{ext}"
+            
             # We use the updated upload_media which handles paths
             public_url = supabase.upload_media(local_result_path, file_name=result_filename)
             

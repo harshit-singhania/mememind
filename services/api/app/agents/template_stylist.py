@@ -141,3 +141,108 @@ def compose_template(caption: str, image_path: str) -> str:
             return ""
 
     return output_path
+
+def create_text_overlay(caption: str, width: int, height: int) -> str:
+    """
+    Generates a transparent PNG with just the text overlay.
+    """
+    import time
+    from PIL import Image, ImageDraw, ImageFont
+
+    timestamp = int(time.time())
+    output_path = f"/tmp/overlay_{timestamp}.png"
+    
+    # Create transparent image
+    img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    
+    # Reuse the logic (simplified duplicate for now to avoid breaking existing function)
+    # Dynamic font size based on image width
+    font_size = int(width / 15)
+    font = None
+    
+    # Try loading common fonts
+    font_candidates = [
+        "arial.ttf", 
+        "Arial.ttf",
+        "/Library/Fonts/Arial.ttf",
+        "/System/Library/Fonts/Helvetica.ttc",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+    ]
+    
+    for f_name in font_candidates:
+        try:
+            font = ImageFont.truetype(f_name, font_size)
+            break
+        except IOError:
+            continue
+    
+    if font is None:
+        try:
+            font = ImageFont.load_default(size=font_size)
+        except TypeError:
+            font = ImageFont.load_default()
+
+    # Layout constants
+    padding_x = int(width * 0.05)
+    padding_y = int(height * 0.05)
+    max_text_width = width - (2 * padding_x)
+    
+    # Wrap text accurately
+    lines = []
+    words = caption.upper().split()
+    current_line = []
+    
+    if not words:
+        return ""
+
+    for word in words:
+        current_line.append(word)
+        test_line = " ".join(current_line)
+        bbox = draw.textbbox((0, 0), test_line, font=font)
+        line_width = bbox[2] - bbox[0]
+        
+        if line_width > max_text_width:
+            if len(current_line) == 1:
+                lines.append(current_line[0])
+                current_line = []
+            else:
+                current_line.pop()
+                lines.append(" ".join(current_line))
+                current_line = [word]
+    
+    if current_line:
+        lines.append(" ".join(current_line))
+        
+    # Calculate total text height
+    total_text_height = 0
+    line_heights = []
+    for line in lines:
+        bbox = draw.textbbox((0, 0), line, font=font)
+        h = bbox[3] - bbox[1]
+        line_heights.append(h)
+        total_text_height += h + 10 # 10px spacing
+
+    # Position text at the bottom with padding
+    y_text = height - total_text_height - padding_y
+    if y_text < padding_y: 
+        y_text = padding_y 
+    
+    for i, line in enumerate(lines):
+        bbox = draw.textbbox((0, 0), line, font=font)
+        text_width = bbox[2] - bbox[0]
+        
+        x_text = (width - text_width) / 2
+        
+        # Thick Outline
+        outline_color = "black"
+        stroke_width = max(2, int(font_size / 10))
+        
+        # Draw text with outline
+        draw.text((x_text, y_text), line, font=font, fill="white", stroke_width=stroke_width, stroke_fill=outline_color)
+        
+        if i < len(line_heights):
+            y_text += line_heights[i] + 10
+
+    img.save(output_path, "PNG")
+    return output_path
