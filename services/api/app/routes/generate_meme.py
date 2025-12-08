@@ -11,7 +11,9 @@ async def generate_meme(request: MemeRequest):
     # Create valid job entry using Prisma
     job = await db.job.create({
         "user_id": request.user_id,
-        "status": "queued"
+        "status": "queued",
+        "source_url": request.media_url,
+        "mood": request.mood_hint,
     })
     
     # Trigger background worker (still stubbed)

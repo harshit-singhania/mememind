@@ -19,3 +19,27 @@ export const checkHealth = async () => {
     return false;
   }
 };
+
+export const uploadImage = async (uri) => {
+  const formData = new FormData();
+  formData.append('file', {
+    uri: uri,
+    type: 'image/jpeg',
+    name: 'upload.jpg',
+  });
+
+  try {
+    const response = await apiClient.post('/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      transformRequest: (data, headers) => {
+        return formData; // useful for React Native to prevent some data transformation issues
+      },
+    });
+    return response.data.url;
+  } catch (error) {
+    console.error('Upload failed:', error);
+    throw error;
+  }
+};

@@ -14,7 +14,7 @@ def generate_captions(moment: dict) -> list:
 
     try:
         genai.configure(api_key=settings.GOOGLE_API_KEY)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-flash-latest')
 
         tags = ", ".join(moment.get("tags", []))
         mood = moment.get("mood_score", 0.5)

@@ -1,8 +1,17 @@
-import { Platform } from 'react-native';
+import { NativeModules } from 'react-native';
 
-// Default to 10.0.2.2 for Android Emulator, localhost for iOS/Web
-const DEFAULT_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+const scriptURL = NativeModules.SourceCode.scriptURL;
+let hostname = '192.168.29.65'; // Fallback to last known IP
+
+if (scriptURL) {
+  try {
+    const address = scriptURL.split('://')[1].split('/')[0];
+    hostname = address.split(':')[0];
+  } catch (e) {
+    console.log('Failed to parse scriptURL:', e);
+  }
+}
 
 export const CONFIG = {
-  API_BASE_URL: process.env.EXPO_PUBLIC_API_URL || `http://${DEFAULT_HOST}:8080`,
+  API_BASE_URL: process.env.EXPO_PUBLIC_API_URL || `http://${hostname}:8080`,
 };

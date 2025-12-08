@@ -13,22 +13,52 @@ class SupabaseClient:
             self.client = None
             print("WARNING: Supabase credentials missing.")
 
-    def upload_media(self, file_path: str, bucket: str = "memes") -> str:
+    def upload_media(self, file: str | bytes, file_name: str = None, bucket: str = "memes") -> str:
         """
-        Uploads a file to Supabase Storage and returns the public URL.
+        Uploads a file (path or bytes) to Supabase Storage and returns the public URL.
         """
         if not self.client:
-            return f"https://stub-supabase.com/{file_path}"
+            # Local fallback
+            if not file_name:
+                import time
+                file_name = f"upload_{int(time.time())}.png"
+            
+            upload_dir = "static/uploads"
+            os.makedirs(upload_dir, exist_ok=True)
+            file_path = os.path.join(upload_dir, file_name)
+            
+            if isinstance(file, str) and os.path.exists(file):
+                 import shutil
+                 shutil.copy(file, file_path)
+            elif isinstance(file, str):
+                 raise FileNotFoundError(f"File not found for upload: {file}")
+            else:
+                 with open(file_path, 'wb') as f:
+                     f.write(file if isinstance(file, bytes) else file.read())
+            
+            return f"http://localhost:8080/uploads/{file_name}"
         
-        file_name = os.path.basename(file_path)
         try:
-            with open(file_path, 'rb') as f:
-                self.client.storage.from_(bucket).upload(file_name, f)
+            # Generate a unique filename if not provided
+            if not file_name:
+                ext = "png"
+                if isinstance(file, str) and os.path.exists(file):
+                     ext = file.split(".")[-1]
+                timestamp = int(time.time())
+                file_name = f"upload_{timestamp}.{ext}"
+
+            # Upload logic
+            if isinstance(file, str) and os.path.exists(file):
+                with open(file, 'rb') as f:
+                    self.client.storage.from_(bucket).upload(file_name, f)
+            else:
+                 # Assume bytes or file-like
+                 self.client.storage.from_(bucket).upload(file_name, file)
             
             return self.client.storage.from_(bucket).get_public_url(file_name)
         except Exception as e:
             print(f"Error uploading to Supabase: {e}")
-            return f"error_uploading_{file_name}"
+            return ""
 
     def create_job(self, job_id: str, user_id: str, status: str = "queued") -> dict:
         """

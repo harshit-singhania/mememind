@@ -1,4 +1,10 @@
-.agent/
+.agenode_modules/
 .env
+.DS_Store
+__pycache__/
+*.pyc
+temp_input_*.png
+result_*.png
+*.log
 mememind.code-workspace
 .venv/
