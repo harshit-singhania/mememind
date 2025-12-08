@@ -23,9 +23,11 @@ class ReelComposer:
             tts_path = os.path.join(self.output_dir, f"tts_{os.path.basename(image_path)}.mp3")
             await self._generate_tts(caption, tts_path)
             
-            if not os.path.exists(tts_path):
-                 print("ERROR: TTS generation failed")
+            if not os.path.exists(tts_path) or os.path.getsize(tts_path) == 0:
+                 print("ERROR: TTS generation failed (Empty or missing file)")
                  return ""
+            
+            print(f"DEBUG: TTS generated successfully. Size: {os.path.getsize(tts_path)} bytes")
 
             # 2. Generate Text Overlay Frame
             from app.agents import template_stylist
@@ -33,6 +35,10 @@ class ReelComposer:
             from PIL import Image
             with Image.open(image_path) as img:
                 w, h = img.size
+            
+            # Ensure Even Dimensions (Important for H.264/Mobile)
+            if w % 2 != 0: w -= 1
+            if h % 2 != 0: h -= 1
             
             overlay_path = template_stylist.create_text_overlay(caption, w, h)
             if not overlay_path:
@@ -81,7 +87,15 @@ class ReelComposer:
             
             # 6. Write File
             # preset='ultrafast' for dev speed
-            video.write_videofile(output_path, codec="libx264", fps=24, preset="ultrafast", audio_codec="aac")
+            # -pix_fmt yuv420p is CRITICAL for mobile (Android/iOS) compatibility
+            video.write_videofile(
+                output_path, 
+                codec="libx264", 
+                fps=24, 
+                preset="ultrafast", 
+                audio_codec="aac",
+                ffmpeg_params=["-pix_fmt", "yuv420p"]
+            )
             
             print(f"DEBUG: Reel generated at {output_path}")
             
@@ -102,16 +116,33 @@ class ReelComposer:
 
     async def _generate_tts(self, text: str, output_path: str):
         """
-        Generates TTS audio using edge-tts.
+        Generates TTS audio using edge-tts, falling back to gTTS.
         """
+        # Clean text
+        clean_text = text.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"')
+        
         try:
             # Randomize voice slightly? Or stick to a good one.
-            voice = "en-US-ChristopherNeural" # deep male voice, good for memes
-            communicate = edge_tts.Communicate(text, voice)
+            voice = "en-US-GuyNeural" # Standard male voice, often more reliable
+            communicate = edge_tts.Communicate(clean_text, voice)
             await communicate.save(output_path)
-            print(f"DEBUG: TTS saved to {output_path}")
+            
+            # Verify it actually wrote data
+            if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+                raise Exception("edge-tts produced empty file")
+                
+            print(f"DEBUG: TTS saved to {output_path} (edge-tts)")
+            
         except Exception as e:
-            print(f"Error in TTS generation: {e}")
+            print(f"Warning: edge-tts failed ({e}). Falling back to gTTS...")
+            try:
+                from gtts import gTTS
+                # gTTS is synchronous, run in thread or just block (short text is fast)
+                tts = gTTS(clean_text, lang='en')
+                tts.save(output_path)
+                print(f"DEBUG: TTS saved to {output_path} (gTTS)")
+            except Exception as e2:
+                print(f"Error in TTS generation (all methods failed): {e2}")
 
     def _select_bg_music(self, mood_score: float) -> str:
         """

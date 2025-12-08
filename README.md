@@ -13,6 +13,7 @@
 - **📱 Native Mobile Experience**: Built with **React Native (Expo)** for a smooth experience on iOS and Android.
 - **⚡ Asynchronous Processing**: Robust backend worker queue ensures fast and reliable generation.
 - **📤 One-Tap Sharing**: Share your creations directly to WhatsApp, Instagram, and other social platforms.
+- **🎬 Reel Composer (Video Memes)**: Generates dynamic MP4 video memes with Ken Burns zoom effects, neural text-to-speech voiceovers, and overlaid text.
 
 ## 🛠 Tech Stack
 
@@ -22,6 +23,8 @@
 - **Database**: PostgreSQL (via Supabase)
 - **ORM**: Prisma Client Python
 - **Image Processing**: Pillow (PIL)
+- **Video Processing**: MoviePy (with ffmpeg)
+- **Text-to-Speech**: Edge-TTS (Neural) / gTTS (Fallback)
 - **Storage**: Supabase Storage / Local Fallback
 
 ### Mobile App
